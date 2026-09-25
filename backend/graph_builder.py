@@ -19,6 +19,24 @@ def _node_id(url: str) -> str:
     return url
 
 
+def _is_external(url: str, base_domain: str) -> bool:
+    netloc = urlparse(url).netloc
+    return bool(netloc) and netloc != base_domain
+
+
+def _resolve_target(url: str, base_domain: str) -> tuple[str, str, NodeType]:
+    """Return (node_id, label, node_type) for a target URL.
+
+    External URLs collapse to a single node per domain (id=``ext::<domain>``)
+    to keep the graph readable when a site links to many external resources.
+    """
+    parsed = urlparse(url)
+    if parsed.netloc and parsed.netloc != base_domain:
+        domain = parsed.netloc
+        return f"ext::{domain}", domain, NodeType.EXTERNAL
+    return url, parsed.path or "/", NodeType.PAGE
+
+
 def build_graph(
     pages: list[PageResult],
     fuzz_results: list[FuzzResult],
@@ -29,20 +47,42 @@ def build_graph(
     """Build graph nodes and edges from scan data.
 
     *page_links* maps page URL → list of link URLs found on that page.
+    Duplicate (source, target, type) edges are collapsed. External targets
+    are grouped by domain into a single node.
     """
     nodes: dict[str, GraphNode] = {}
     edges: list[GraphEdge] = []
+    seen_edges: set[tuple[str, str, str]] = set()
 
-    # 1. Pages
+    def add_edge(source: str, target: str, edge_type: EdgeType, label: str | None = None) -> None:
+        key = (source, target, edge_type.value)
+        if key in seen_edges or source == target:
+            return
+        seen_edges.add(key)
+        edges.append(GraphEdge(source=source, target=target, edge_type=edge_type, label=label))
+
+    def ensure_external_node(node_id: str, label: str) -> None:
+        if node_id not in nodes:
+            nodes[node_id] = GraphNode(
+                id=node_id,
+                label=label,
+                node_type=NodeType.EXTERNAL,
+                metadata={"domain": label},
+            )
+
+    # 1. Pages (visited by the spider — always internal or explicitly-visited external)
     for p in pages:
+        if _is_external(p.url, base_domain):
+            # Externals collapsed to a per-domain node
+            node_id, label, _ = _resolve_target(p.url, base_domain)
+            ensure_external_node(node_id, label)
+            continue
         nid = _node_id(p.url)
         parsed = urlparse(p.url)
-        is_external = parsed.netloc and parsed.netloc != base_domain
-        ntype = NodeType.EXTERNAL if is_external else NodeType.PAGE
         nodes[nid] = GraphNode(
             id=nid,
             label=parsed.path or "/",
-            node_type=ntype,
+            node_type=NodeType.PAGE,
             status_code=p.status_code,
             metadata={
                 "title": p.title or "",
@@ -53,23 +93,22 @@ def build_graph(
             },
         )
 
-    # 2. Links → edges
+    # 2. Links → edges (with dedup; externals collapsed per domain)
     for source_url, targets in page_links.items():
+        source_id = _node_id(source_url)
         for target_url in targets:
-            # Ensure target node exists
-            tid = _node_id(target_url)
+            tid, label, ttype = _resolve_target(target_url, base_domain)
             if tid not in nodes:
-                parsed = urlparse(target_url)
-                is_ext = parsed.netloc and parsed.netloc != base_domain
-                nodes[tid] = GraphNode(
-                    id=tid,
-                    label=parsed.path or target_url,
-                    node_type=NodeType.EXTERNAL if is_ext else NodeType.PAGE,
-                    metadata={},
-                )
-            edges.append(
-                GraphEdge(source=_node_id(source_url), target=tid, edge_type=EdgeType.LINK)
-            )
+                if ttype == NodeType.EXTERNAL:
+                    ensure_external_node(tid, label)
+                else:
+                    nodes[tid] = GraphNode(
+                        id=tid,
+                        label=label,
+                        node_type=NodeType.PAGE,
+                        metadata={},
+                    )
+            add_edge(source_id, tid, EdgeType.LINK)
 
     # 3. Fuzzed paths
     for fr in fuzz_results:
@@ -103,29 +142,21 @@ def build_graph(
                 },
             )
         # Edge from page to form
-        edges.append(
-            GraphEdge(
-                source=_node_id(fi.page_url),
-                target=form_id,
-                edge_type=EdgeType.FORM_SUBMIT,
-                label=fi.method.upper(),
-            )
-        )
+        add_edge(_node_id(fi.page_url), form_id, EdgeType.FORM_SUBMIT, fi.method.upper())
         # Edge from form to action target (if different from page)
         if fi.action and fi.action != fi.page_url:
-            action_id = _node_id(fi.action)
+            action_id, action_label, action_type = _resolve_target(fi.action, base_domain)
             if action_id not in nodes:
-                parsed = urlparse(fi.action)
-                is_ext = parsed.netloc and parsed.netloc != base_domain
-                nodes[action_id] = GraphNode(
-                    id=action_id,
-                    label=parsed.path or fi.action,
-                    node_type=NodeType.EXTERNAL if is_ext else NodeType.PAGE,
-                    metadata={},
-                )
-            edges.append(
-                GraphEdge(source=form_id, target=action_id, edge_type=EdgeType.FORM_SUBMIT)
-            )
+                if action_type == NodeType.EXTERNAL:
+                    ensure_external_node(action_id, action_label)
+                else:
+                    nodes[action_id] = GraphNode(
+                        id=action_id,
+                        label=action_label,
+                        node_type=NodeType.PAGE,
+                        metadata={},
+                    )
+            add_edge(form_id, action_id, EdgeType.FORM_SUBMIT)
 
     return list(nodes.values()), edges
 
