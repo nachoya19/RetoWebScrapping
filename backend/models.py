@@ -18,7 +18,7 @@ class ScanConfig(BaseModel):
     max_pages: int = Field(default=50, ge=1, le=500, description="Max pages to visit")
     enable_fuzzing: bool = Field(default=False, description="Enable content fuzzing")
     include_subdomains: bool = Field(default=False, description="Follow subdomains")
-    request_delay: float = Field(default=1.0, ge=0.5, description="Delay between requests in seconds")
+    request_delay: float = Field(default=1.0, ge=1.0, description="Delay between requests in seconds (min 1s per spec)")
     fuzz_extensions: list[str] = Field(
         default_factory=lambda: [".php", ".html", ".js", ".txt", ".bak", ".old", ".conf"],
         description="Extensions to try during fuzzing",

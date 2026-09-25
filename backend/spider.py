@@ -37,7 +37,7 @@ class Spider:
         self.depth = depth
         self.max_pages = max_pages
         self.include_subdomains = include_subdomains
-        self.request_delay = max(request_delay, 0.5)
+        self.request_delay = max(request_delay, 1.0)
         self.on_progress = on_progress
 
         # State
