@@ -189,10 +189,11 @@ const Graph = (() => {
     });
   }
 
-  /** Filter buttons */
+  /** Filter buttons. Uses .onclick (single handler) so repeated
+   *  Graph.init() calls don't stack listeners. */
   function setupFilters() {
     document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.onclick = () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
@@ -211,7 +212,7 @@ const Graph = (() => {
             }
           });
         }
-      });
+      };
     });
   }
 
@@ -220,9 +221,9 @@ const Graph = (() => {
     const select = document.getElementById('graphLayout');
     if (!select || !cy) return;
 
-    select.addEventListener('change', () => {
+    select.onchange = () => {
       cy.layout(buildLayoutOptions(select.value)).run();
-    });
+    };
   }
 
   /** Layout config tuned per-algorithm.
@@ -258,10 +259,10 @@ const Graph = (() => {
     const btn = document.getElementById('btnFitGraph');
     if (!btn || !cy) return;
 
-    btn.addEventListener('click', () => {
+    btn.onclick = () => {
       cy.fit(undefined, 40);
       cy.animate({ zoom: cy.zoom(), center: { eles: cy.elements() } }, { duration: 300 });
-    });
+    };
   }
 
   /** Tree view */
@@ -277,7 +278,7 @@ const Graph = (() => {
       ? renderTree(tree, '', true)
       : '(sin datos — realiza un escaneo primero)';
 
-    btn.addEventListener('click', () => {
+    btn.onclick = () => {
       // Re-populate on each open in case results were reloaded meanwhile.
       output.textContent = tree && tree.name
         ? renderTree(tree, '', true)
@@ -286,7 +287,7 @@ const Graph = (() => {
       btn.textContent = container.classList.contains('hidden')
         ? 'Mostrar Árbol de Rutas'
         : 'Ocultar Árbol de Rutas';
-    });
+    };
   }
 
   /** Render tree as ASCII */
