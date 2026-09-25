@@ -142,7 +142,7 @@ const Graph = (() => {
           },
         },
       ],
-      layout: buildLayoutOptions('breadthfirst'),
+      layout: buildLayoutOptions('cose'),
       minZoom: 0.2,
       maxZoom: 4,
       textureOnViewport: true,
@@ -226,32 +226,28 @@ const Graph = (() => {
     };
   }
 
-  /** Layout config tuned per-algorithm.
-   *  CoSE is O(N^2); we cap iterations and disable animation so large graphs
-   *  don't freeze the browser on completion. Other layouts are O(N) and fine
-   *  with a short animation.
+  /** Layout config per-algorithm. CoSE uses the original force-directed
+   *  organization; on very large graphs we still cap iterations so the
+   *  browser doesn't lock up, but the visual layout is the original one.
    */
   function buildLayoutOptions(name) {
     const nodeCount = cy ? cy.nodes().length : 0;
-    const heavy = nodeCount > 80;
+    const heavy = nodeCount > 150;
     const base = { name, padding: 40 };
 
     if (name === 'cose') {
       return {
         ...base,
-        animate: false,
-        randomize: false,
-        nodeRepulsion: () => (heavy ? 4000 : 8000),
-        idealEdgeLength: () => 60,
-        numIter: heavy ? 500 : 1000,
-        nestingFactor: 1.2,
-        gravity: 1,
+        animate: true,
+        animationDuration: 500,
+        nodeRepulsion: () => 8000,
+        ...(heavy ? { numIter: 800 } : {}),
       };
     }
     if (name === 'breadthfirst') {
-      return { ...base, directed: true, spacingFactor: 1.2, animate: !heavy, animationDuration: 400 };
+      return { ...base, directed: true, spacingFactor: 1.2, animate: true, animationDuration: 400 };
     }
-    return { ...base, animate: !heavy, animationDuration: 400 };
+    return { ...base, animate: true, animationDuration: 400 };
   }
 
   /** Fit button */
