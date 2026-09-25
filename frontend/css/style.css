@@ -17,7 +17,6 @@
 
   --text:       #e4e4ed;
   --text-dim:   #9999b3;
-  --text-muted: #6666880;
 
   --accent:     #00d4ff;
   --accent-dim: #00a8cc;
@@ -281,21 +280,6 @@ body::before {
   margin-bottom: 28px;
 }
 
-.input-with-icon {
-  position: relative;
-}
-
-.input-with-icon svg {
-  position: absolute;
-  left: 14px; top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-dim);
-}
-
-.input-with-icon input {
-  padding-left: 42px;
-}
-
 input[type="url"],
 input[type="text"],
 input[type="number"],
@@ -310,6 +294,24 @@ select {
   font-size: 0.9rem;
   transition: all var(--transition);
   outline: none;
+}
+
+.input-with-icon {
+  position: relative;
+}
+
+.input-with-icon svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  pointer-events: none; /* Asegura que hacer clic sobre el icono ponga el foco en el input */
+  z-index: 2;
+}
+
+.input-with-icon input {
+  padding-left: 48px; /* Aumentado a 48px para dar más margen tras el icono de 18px */
 }
 
 input:focus,
@@ -372,45 +374,78 @@ input[type="range"]::-webkit-slider-thumb:hover {
   text-align: center;
 }
 
-/* Checkboxes */
+/* ── Checkboxes (Alineación Horizontal Perfecta) ────────── */
 .checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
   cursor: pointer;
   font-size: 0.9rem;
   color: var(--text);
+  user-select: none;
+  position: relative;
+  width: auto !important; /* Evita que el label ocupe todo el ancho y rompa la fila */
 }
 
+/* Ocultar input nativo */
 .checkbox-label input[type="checkbox"] {
-  display: none;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
 }
 
+/* La cajita del checkbox */
 .checkmark {
-  width: 20px; height: 20px;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
   border: 2px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   position: relative;
   transition: all var(--transition);
-  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0 !important; /* Impide que se reduzca o rompa fila */
+  margin: 0 !important;
 }
 
-.checkbox-label input:checked + .checkmark {
-  background: var(--accent);
+.checkbox-label:hover .checkmark {
   border-color: var(--accent);
 }
 
-.checkbox-label input:checked + .checkmark::after {
+/* Estado Marcado */
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+/* Tick centrado */
+.checkmark::after {
   content: '';
-  position: absolute;
-  left: 5px; top: 2px;
-  width: 6px; height: 10px;
+  display: none;
+  width: 5px;
+  height: 9px;
   border: solid var(--bg-deep);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
+  margin-bottom: 2px;
+  box-sizing: border-box;
 }
 
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+  display: block;
+}
 /* Fuzzing options */
 .fuzz-options {
   background: var(--bg-surface);
@@ -540,6 +575,30 @@ input[type="range"]::-webkit-slider-thumb:hover {
   display: flex;
   gap: 12px;
   margin-top: 8px;
+}
+
+/* Estado deshabilitado general y para botones primarios */
+.btn:disabled,
+.btn-primary:disabled {
+  background: var(--bg-card) !important;
+  color: var(--text-dim) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.4 !important;
+  transform: none !important;
+  pointer-events: none !important; /* Evita cualquier hover o clic */
+}
+
+/* Anular hover/active en estado deshabilitado */
+.btn:disabled:hover,
+.btn-primary:disabled:hover,
+.btn:disabled:active,
+.btn-primary:disabled:active {
+  background: var(--bg-card) !important;
+  color: var(--text-dim) !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 /* ── Progress ─────────────────────────────── */

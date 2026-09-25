@@ -89,9 +89,20 @@
   const progressText = document.getElementById('progressText');
   const progressSub  = document.getElementById('progressSubtitle');
 
-  // ── Buttons ────────────────────────────────
-  const btnStart = document.getElementById('btnStart');
-  const btnStop  = document.getElementById('btnStop');
+  // ── Buttons & Checkbox ─────────────────────
+  const btnStart    = document.getElementById('btnStart');
+  const btnStop     = document.getElementById('btnStop');
+  const authConfirm = document.getElementById('authConfirm');
+
+  if (authConfirm && btnStart) {
+    const updateButtonState = () => {
+      btnStart.disabled = !authConfirm.checked;
+    };
+
+    updateButtonState();
+
+    authConfirm.addEventListener('change', updateButtonState);
+  }
 
   // ── Scan form submit ───────────────────────
   const scanForm = document.getElementById('scanForm');
