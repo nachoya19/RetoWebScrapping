@@ -142,9 +142,12 @@ const Graph = (() => {
           },
         },
       ],
-      layout: { name: 'cose', animate: true, animationDuration: 500, padding: 40, nodeRepulsion: () => 8000 },
+      layout: buildLayoutOptions('cose'),
       minZoom: 0.2,
       maxZoom: 4,
+      textureOnViewport: true,
+      hideEdgesOnViewport: true,
+      pixelRatio: 1,
     });
 
     setupTooltip();
@@ -219,24 +222,36 @@ const Graph = (() => {
     if (!select || !cy) return;
 
     select.addEventListener('change', () => {
-      const layoutName = select.value;
-      const options = {
-        name: layoutName,
-        animate: true,
-        animationDuration: 500,
-        padding: 40,
-      };
-
-      if (layoutName === 'cose') {
-        options.nodeRepulsion = () => 8000;
-      }
-      if (layoutName === 'breadthfirst') {
-        options.directed = true;
-        options.spacingFactor = 1.2;
-      }
-
-      cy.layout(options).run();
+      cy.layout(buildLayoutOptions(select.value)).run();
     });
+  }
+
+  /** Layout config tuned per-algorithm.
+   *  CoSE is O(N^2); we cap iterations and disable animation so large graphs
+   *  don't freeze the browser on completion. Other layouts are O(N) and fine
+   *  with a short animation.
+   */
+  function buildLayoutOptions(name) {
+    const nodeCount = cy ? cy.nodes().length : 0;
+    const heavy = nodeCount > 80;
+    const base = { name, padding: 40 };
+
+    if (name === 'cose') {
+      return {
+        ...base,
+        animate: false,
+        randomize: false,
+        nodeRepulsion: () => (heavy ? 4000 : 8000),
+        idealEdgeLength: () => 60,
+        numIter: heavy ? 500 : 1000,
+        nestingFactor: 1.2,
+        gravity: 1,
+      };
+    }
+    if (name === 'breadthfirst') {
+      return { ...base, directed: true, spacingFactor: 1.2, animate: !heavy, animationDuration: 400 };
+    }
+    return { ...base, animate: !heavy, animationDuration: 400 };
   }
 
   /** Fit button */
