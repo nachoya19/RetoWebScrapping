@@ -1,6 +1,8 @@
 /**
  * app.js — Main controller: tabs, form, SSE, orchestration
  */
+import { uploadWordlist, startScan, stopScan, fetchResults, fetchScanStatus, createProgressStream } from './api.js';
+
 (() => {
   'use strict';
 
@@ -101,10 +103,8 @@
 
     // Upload custom wordlist if selected
     if (wordlistInput?.files.length > 0) {
-      const formData = new FormData();
-      formData.append('file', wordlistInput.files[0]);
       try {
-        await fetch('/api/wordlist', { method: 'POST', body: formData });
+        await uploadWordlist(wordlistInput.files[0]);
         addLog('Diccionario personalizado cargado', 'success');
       } catch (err) {
         addLog('Error al subir diccionario: ' + err.message, 'error');
@@ -128,14 +128,9 @@
 
     // Start scan
     try {
-      const resp = await fetch('/api/scan/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
-      });
-      const data = await resp.json();
+      const { ok, data } = await startScan(config);
 
-      if (!resp.ok) {
+      if (!ok) {
         addLog(`Error: ${data.error}`, 'error');
         alert(data.error);
         return;
@@ -163,7 +158,7 @@
   // ── Stop button ────────────────────────────
   btnStop?.addEventListener('click', async () => {
     try {
-      await fetch('/api/scan/stop', { method: 'POST' });
+      await stopScan();
       addLog('Deteniendo escaneo…', 'info');
     } catch (err) {
       addLog('Error al detener: ' + err.message, 'error');
@@ -175,7 +170,7 @@
 
   function connectSSE() {
     if (evtSource) evtSource.close();
-    evtSource = new EventSource('/api/scan/progress');
+    evtSource = createProgressStream();
 
     evtSource.onmessage = (event) => {
       const msg = JSON.parse(event.data);
@@ -271,9 +266,8 @@
   // ── Load results into UI ───────────────────
   async function loadResults() {
     try {
-      const resp = await fetch('/api/results');
-      if (!resp.ok) return;
-      const data = await resp.json();
+      const { ok, data } = await fetchResults();
+      if (!ok) return;
 
       // Initialize all modules
       Tables.init(data);
@@ -308,8 +302,7 @@
   // ── Check for existing results on load ─────
   (async () => {
     try {
-      const resp = await fetch('/api/scan/status');
-      const status = await resp.json();
+      const status = await fetchScanStatus();
       if (status.has_results) {
         loadResults();
         setStatus('ready', 'Resultados disponibles');
