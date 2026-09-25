@@ -30,9 +30,9 @@ def _classify_form(form_info: FormInfo) -> FormType:
     if "password" in field_types and field_types & {"text", "email"}:
         return FormType.LOGIN
 
-    # Search: GET + search-like field names or role
+    # Search: search-like field names or HTML5 search input type (any method)
     search_names = {"q", "query", "search", "s", "buscar", "keyword", "keywords"}
-    if form_info.method == "get" and (field_names & search_names or "search" in field_types):
+    if field_names & search_names or "search" in field_types:
         return FormType.SEARCH
 
     return FormType.OTHER
