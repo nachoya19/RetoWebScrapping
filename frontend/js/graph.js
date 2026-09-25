@@ -142,11 +142,10 @@ const Graph = (() => {
           },
         },
       ],
-      layout: buildLayoutOptions('cose'),
+      layout: buildLayoutOptions('breadthfirst'),
       minZoom: 0.2,
       maxZoom: 4,
       textureOnViewport: true,
-      hideEdgesOnViewport: true,
       pixelRatio: 1,
     });
 
@@ -273,16 +272,21 @@ const Graph = (() => {
 
     if (!btn || !container || !output) return;
 
+    // Populate immediately so the content is ready before the first click.
+    output.textContent = tree && tree.name
+      ? renderTree(tree, '', true)
+      : '(sin datos — realiza un escaneo primero)';
+
     btn.addEventListener('click', () => {
+      // Re-populate on each open in case results were reloaded meanwhile.
+      output.textContent = tree && tree.name
+        ? renderTree(tree, '', true)
+        : '(sin datos — realiza un escaneo primero)';
       container.classList.toggle('hidden');
       btn.textContent = container.classList.contains('hidden')
         ? 'Mostrar Árbol de Rutas'
         : 'Ocultar Árbol de Rutas';
     });
-
-    if (tree) {
-      output.textContent = renderTree(tree, '', true);
-    }
   }
 
   /** Render tree as ASCII */
